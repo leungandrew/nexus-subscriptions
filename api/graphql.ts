@@ -1,40 +1,26 @@
-import { schema } from "nexus"
-      
-schema.objectType({
-  name: "World",
-  definition(t) {
-    t.model.id()
-    t.model.name()
-    t.model.population()
-  }
-})
-      
-schema.queryType({
-  definition(t) {
-    t.field("hello", {
-      type: "World",
-      args: {
-        world: schema.stringArg({ required: false })
+import { schema } from 'nexus'
+
+schema.subscriptionType({
+  definition: (t) => {
+    t.field('hello', {
+      type: 'String',
+      subscribe: async (root, args, ctx) => {
+        return ctx.pubsub.asyncIterator('hello')
       },
-      async resolve(_root, args, ctx) {
-        const worldToFindByName = args.world ?? 'Earth'
-        const world = await ctx.db.world.findOne({
-          where: {
-            name: worldToFindByName
-          }
-        })
-      
-        if (!world) throw new Error(`No such world named "${args.world}"`)
-      
-        return world
-      }
+      resolve: async (payload, args, ctx) => {
+        return payload
+      },
     })
-  
-    t.list.field('worlds', {
-      type: 'World',
-      resolve(_root, _args, ctx) { 
-        return ctx.db.world.findMany()
-      }
+  },
+})
+
+schema.queryType({
+  definition: (t) => {
+    t.string('hello', {
+      resolve: async (root, args, ctx) => {
+        ctx.pubsub.publish('hello', 'Hello World')
+        return 'Hello'
+      },
     })
-  }
+  },
 })
